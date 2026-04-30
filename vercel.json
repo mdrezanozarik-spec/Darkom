@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "name": "Darkom",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ],
+  "trailingSlash": false
+}
