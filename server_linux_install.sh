@@ -253,11 +253,11 @@ do_uninstall() {
   local removed=0
   for f in \
     "$INSTALL_DIR"/StormDNS_Server_Linux*_v* \
-    "$INSTALL_DIR"/server_config.toml \
-    "$INSTALL_DIR"/server_config.toml.backup \
-    "$INSTALL_DIR"/server_config.toml.bak \
-    "$INSTALL_DIR"/server_config_*.toml \
-    "$INSTALL_DIR"/encrypt_key.txt \
+    "$INSTALL_DIR"/server_configs.toml \
+    "$INSTALL_DIR"/server_configs.toml.backup \
+    "$INSTALL_DIR"/server_configs.toml.bak \
+    "$INSTALL_DIR"/server_configs_*.toml \
+    "$INSTALL_DIR"/encrypt_keys.txt \
     "$INSTALL_DIR"/init_logs.tmp \
     "$INSTALL_DIR"/*.spec; do
     if [[ -e "$f" ]]; then
@@ -283,8 +283,8 @@ if [[ "$ACTION" == "uninstall" ]]; then
   exit 0
 fi
 
-if [[ -f "server_config.toml" && -f "server_config.toml.backup" ]]; then
-  log_error "Both server_config.toml and server_config.toml.backup exist. Remove one and retry."
+if [[ -f "server_configs.toml" && -f "server_configs.toml.backup" ]]; then
+  log_error "Both server_configs.toml and server_configs.toml.backup exist. Remove one and retry."
 fi
 
 TMP_LOG="init_logs.tmp"
@@ -642,8 +642,8 @@ fi
 ARCH="$(uname -m)"
 select_release_artifact "$ARCH" "$TARGET_VERSION"
 
-if [[ -f "server_config.toml" ]]; then
-  mv -f server_config.toml server_config.toml.backup
+if [[ -f "server_configs.toml" ]]; then
+  mv -f server_configs.toml server_configs.toml.backup
   log_info "Existing config backed up."
 fi
 
@@ -678,23 +678,23 @@ done
 shopt -u nullglob
 
 log_header "Configuration"
-[[ -f "server_config.toml" ]] || log_error "server_config.toml not found after extraction."
-CURRENT_VERSION="$(extract_config_version server_config.toml)"
+[[ -f "server_configs.toml" ]] || log_error "server_configs.toml not found after extraction."
+CURRENT_VERSION="$(extract_config_version server_configs.toml)"
 if [[ -z "${CURRENT_VERSION:-}" ]]; then
-  log_error "Downloaded server_config.toml is invalid (CONFIG_VERSION missing)."
+  log_error "Downloaded server_configs.toml is invalid (CONFIG_VERSION missing)."
 fi
-if [[ -f "server_config.toml.backup" ]]; then
-  BACKUP_VERSION="$(extract_config_version server_config.toml.backup)"
+if [[ -f "server_configs.toml.backup" ]]; then
+  BACKUP_VERSION="$(extract_config_version server_configs.toml.backup)"
   if [[ -z "${BACKUP_VERSION:-}" ]]; then
     log_error "Backup config is too old (CONFIG_VERSION missing). Merge manually."
   fi
 
   if [[ "$BACKUP_VERSION" == "$CURRENT_VERSION" ]]; then
-    mv -f server_config.toml.backup server_config.toml
+    mv -f server_configs.toml.backup server_configs.toml
     log_info "Config restored from backup."
   elif version_lt "$BACKUP_VERSION" "$CURRENT_VERSION"; then
-    OLD_CFG_NAME="server_config_$(date +%Y%m%d_%H%M%S).toml"
-    mv -f server_config.toml.backup "$OLD_CFG_NAME"
+    OLD_CFG_NAME="server_configs_$(date +%Y%m%d_%H%M%S).toml"
+    mv -f server_configs.toml.backup "$OLD_CFG_NAME"
     log_warn "Old config version detected (backup=$BACKUP_VERSION < new=$CURRENT_VERSION)."
     log_warn "Previous config renamed to: $OLD_CFG_NAME"
     log_info "Using fresh config template; please set DOMAIN and other required fields."
@@ -703,11 +703,11 @@ if [[ -f "server_config.toml.backup" ]]; then
   fi
 fi
 
-if [[ -f "server_config.toml" ]] && grep -q '"v.domain.com"' server_config.toml; then
+if [[ -f "server_configs.toml" ]] && grep -q '"v.domain.com"' server_configs.toml; then
   echo -e "${YELLOW}${BOLD}Attention:${NC} Set your NS domain."
   read -r -p ">>> Enter your Domain (e.g. vpn.example.com): " USER_DOMAIN </dev/tty || true
   if [[ -n "${USER_DOMAIN:-}" ]]; then
-    sed -i -E "s|^DOMAIN[[:space:]]*=.*$|DOMAIN = [\"${USER_DOMAIN}\"]|" server_config.toml
+    sed -i -E "s|^DOMAIN[[:space:]]*=.*$|DOMAIN = [\"${USER_DOMAIN}\"]|" server_configs.toml
   fi
 fi
 
@@ -733,7 +733,7 @@ if [[ "$READY" != true ]]; then
 fi
 
 echo -e "${GREEN}${BOLD}------------------------------------------------------"
-echo -e "  YOUR ENCRYPTION KEY: ${NC}${CYAN}$(cat encrypt_key.txt 2>/dev/null)${NC}"
+echo -e "  YOUR ENCRYPTION KEY: ${NC}${CYAN}$(cat encrypt_keys.txt 2>/dev/null)${NC}"
 echo -e "${GREEN}${BOLD}------------------------------------------------------${NC}"
 
 log_header "Installing System Service"
@@ -783,8 +783,8 @@ echo -e "  ${YELLOW}>${NC} Stop:    systemctl stop stormdns"
 echo -e "  ${YELLOW}>${NC} Restart: systemctl restart stormdns"
 echo -e "  ${YELLOW}>${NC} Logs:    journalctl -u stormdns -f"
 echo -e "\n${BOLD}Files:${NC}"
-echo -e "  ${YELLOW}>${NC} ${INSTALL_DIR}/server_config.toml"
-echo -e "  ${YELLOW}>${NC} ${INSTALL_DIR}/encrypt_key.txt"
+echo -e "  ${YELLOW}>${NC} ${INSTALL_DIR}/server_configs.toml"
+echo -e "  ${YELLOW}>${NC} ${INSTALL_DIR}/encrypt_keys.txt"
 echo -e "${YELLOW}Final Note:${NC} If config changes, run: systemctl restart stormdns"
 
 rm -f *.spec >/dev/null 2>&1 || true
